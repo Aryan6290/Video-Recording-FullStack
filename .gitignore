@@ -1,0 +1,48 @@
+# OS Files
+.DS_Store
+Thumbs.db
+*.log
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# Frontend / React Native (Node, Android, iOS)
+node_modules/
+frontend/node_modules/
+.expo/
+frontend/android/.gradle/
+frontend/android/app/build/
+frontend/android/build/
+frontend/ios/build/
+frontend/ios/Pods/
+frontend/ios/.xcode.env.local
+frontend/.env
+
+# Backend / Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pyvenv.cfg
+.env
+backend/.env
+backend/video_capture.db
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+.terraform.lock.hcl
+crash.log
+dummy_lambda.zip
