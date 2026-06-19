@@ -2,6 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../data/constants';
 import { LoginResponse, VideoMetadata, VideoResponse, PresignedUrlResponse } from '../models';
+import { encryptToken, decryptToken } from '../utils/security';
 
 // Keys for AsyncStorage
 const TOKEN_KEY = 'locara_worker_token';
@@ -19,7 +20,8 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   async (config) => {
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const encryptedToken = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = encryptedToken ? decryptToken(encryptedToken) : null;
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -44,7 +46,8 @@ export const apiService = {
     });
     
     const { access_token, worker_id } = response.data;
-    await AsyncStorage.setItem(TOKEN_KEY, access_token);
+    const encryptedToken = encryptToken(access_token);
+    await AsyncStorage.setItem(TOKEN_KEY, encryptedToken);
     await AsyncStorage.setItem(WORKER_ID_KEY, worker_id);
     return response.data;
   },
@@ -53,7 +56,8 @@ export const apiService = {
    * Get current worker session info.
    */
   async getSession(): Promise<{ token: string | null; workerId: string | null }> {
-    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const encryptedToken = await AsyncStorage.getItem(TOKEN_KEY);
+    const token = encryptedToken ? decryptToken(encryptedToken) : null;
     const workerId = await AsyncStorage.getItem(WORKER_ID_KEY);
     return { token, workerId };
   },

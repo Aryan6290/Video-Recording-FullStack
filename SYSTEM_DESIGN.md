@@ -9,37 +9,36 @@ This document details the production-ready system architecture, database schemas
 
 The following diagram illustrates the complete end-to-end architecture, showing the decoupled relationship between the client application (React Native), the Backend API (FastAPI), the local relational cache, and the AWS ingestion pipeline.
 
-```mermaid
 graph TD
-    subgraph Client Application (React Native Android)
-        A[Camera Module] -->|Record Video File| B[Local Android File System]
-        A -->|Extract Session Metadata| C[Local SQLite Layer]
-        C -->|Queue Engine| D[Upload worker]
+
+    subgraph "Client Application (React Native Android)"
+        A["Camera Module"] -->|"Record Video File"| B["Local Android File System"]
+        A -->|"Extract Session Metadata"| C["Local SQLite Layer"]
+        C -->|"Queue Engine"| D["Upload Worker"]
     end
 
     subgraph Authentication
-        H[Worker Login] <-->|JWT Handshake| F[FastAPI Backend]
+        H["Worker Login"] <-->|"JWT Handshake"| F["FastAPI Backend"]
     end
 
-    subgraph Ingestion & Sync Pipeline
-        D -->|1. Register Session Metadata| F
-        F -->|2. Query Metadata Cache| G[(Backend DB - Postgres)]
-        D -->|3. Request Upload URL| F
-        F -->|4. Generate Scoped URL| I[S3 Presigned URL Generator]
-        D -->|5. HTTP PUT Video File| J[AWS S3 Bucket]
+    subgraph "Ingestion & Sync Pipeline"
+        D -->|"Register Session Metadata"| F
+        F -->|"Query Metadata Cache"| G[("Backend DB<br/>Postgres")]
+        D -->|"Request Upload URL"| F
+        F -->|"Generate Scoped URL"| I["S3 Presigned URL Generator"]
+        D -->|"HTTP PUT Video File"| J["AWS S3 Bucket"]
     end
 
-    subgraph Verification & Confirmation
-        J -->|6. s3:ObjectCreated Event| K[AWS Lambda Hook]
-        K -->|7. Event Webhook API Callback| F
-        F -->|8. Mark Uploaded & Close Session| G
-        D -->|9. Poll Status / Delete File| F
+    subgraph "Verification & Confirmation"
+        J -->|"s3:ObjectCreated Event"| K["AWS Lambda Hook"]
+        K -->|"Event Webhook API Callback"| F
+        F -->|"Mark Uploaded & Close Session"| G
+        D -->|"Poll Status / Delete File"| F
     end
 
     style J fill:#f96,stroke:#333,stroke-width:2px
     style C fill:#9cf,stroke:#333,stroke-width:2px
     style F fill:#bbf,stroke:#333,stroke-width:2px
-```
 
 ### Decoupled Data Flow Pipeline
 1. **Capture**: The worker records a video. The video file (MP4) is written to the local device storage (`local_path`).

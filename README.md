@@ -120,3 +120,39 @@ Please refer to the root [**`SYSTEM_DESIGN.md`**](file:///Users/aryanbarnwal/Pro
 *   **Storage cost projections** ($9,060 stabilized monthly run-rate for 900TB storage using Glacier lifecycle rules).
 *   **Reliability systems** including S3 bucket notifications triggering Lambda-based webhook updates.
 *   **Scalability plans** detailing how RDS Proxy, Amazon SQS buffers, and celery workers resolve bottleneck challenges at 10K concurrent users.
+
+---
+
+## 💾 Local Database Strategy (Rubric Requirements)
+
+### 1. Production SQLite Schema Migration Strategy
+*Scenario: Adding a `gps_accuracy` (REAL) column to 50K existing rows on an app update.*
+
+Since mobile SQLite does not support standard online columns insertions with nested integrity in legacy OS setups, we use a transaction-safe table migration pattern:
+1.  **ACID Transaction Lock**: Open a transaction (`BEGIN TRANSACTION;`) to ensure the update either succeeds completely or rolls back on failure, avoiding database corruption.
+2.  **Create Temp Table**: Create a temporary table `videos_temp` matching the desired schema, appending the new `gps_accuracy REAL` column.
+3.  **Data Copy**: Copy the 50K existing records from `videos` to `videos_temp`, mapping `NULL` for the new `gps_accuracy` column.
+4.  **Swap Tables**: Drop the old `videos` table and rename `videos_temp` to `videos` (`ALTER TABLE videos_temp RENAME TO videos;`).
+5.  **Re-create Indexes**: Re-apply optimal performance indexes (`idx_videos_upload_queue`, `idx_videos_worker_history`).
+6.  **Commit**: Commit the transaction (`COMMIT;`).
+
+*Full SQL script for this migration plan is documented in [**`SYSTEM_DESIGN.md` (Section 2 - Migration Strategy)**](file:///Users/aryanbarnwal/Projects/Assignment/SYSTEM_DESIGN.md#L106-L166).*
+
+### 2. Query Efficiency & Keyset Pagination
+*Scenario: Optimizing listings and filters for active worker records.*
+
+*   **Anti-Pattern (Offset Pagination)**: Queries using `LIMIT 20 OFFSET 10000` exhibit $O(N)$ linear complexity, forcing SQLite to scan and discard 10,000 records before returning the next 20.
+*   **Optimized Solution (Keyset Cursor-based Pagination)**: The dashboard queries records relative to the last item loaded (`started_at` timestamp and tie-breaker `video_id` cursor):
+    ```sql
+    SELECT * FROM videos
+    WHERE worker_id = :worker_id
+      AND (started_at < :cursor_timestamp OR (started_at = :cursor_timestamp AND video_id < :cursor_id))
+    ORDER BY started_at DESC, video_id DESC
+    LIMIT 20;
+    ```
+    This translates to a binary search lookup ($O(\log N)$) using the composite index `idx_videos_worker_history ON videos(worker_id, started_at DESC, video_id DESC)`.
+*   **Filtered Indexing**: Background upload queues scan only unsynced videos using a conditional index:
+    ```sql
+    CREATE INDEX idx_videos_upload_queue ON videos(upload_state) WHERE upload_state IN ('pending', 'failed');
+    ```
+    This skips scanning the millions of successfully `uploaded` entries.
