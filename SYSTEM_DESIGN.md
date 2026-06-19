@@ -9,36 +9,34 @@ This document details the production-ready system architecture, database schemas
 
 The following diagram illustrates the complete end-to-end architecture, showing the decoupled relationship between the client application (React Native), the Backend API (FastAPI), the local relational cache, and the AWS ingestion pipeline.
 
+```mermaid
 graph TD
 
-    subgraph "Client Application (React Native Android)"
-        A["Camera Module"] -->|"Record Video File"| B["Local Android File System"]
-        A -->|"Extract Session Metadata"| C["Local SQLite Layer"]
-        C -->|"Queue Engine"| D["Upload Worker"]
-    end
+subgraph Client
+    A["Camera Module"] -->|"Record Video"| B["Local File System"]
+    A -->|"Extract Metadata"| C["SQLite"]
+    C -->|"Queue"| D["Upload Worker"]
+end
 
-    subgraph Authentication
-        H["Worker Login"] <-->|"JWT Handshake"| F["FastAPI Backend"]
-    end
+subgraph Auth
+    H["Worker Login"] <-->|JWT| F["FastAPI Backend"]
+end
 
-    subgraph "Ingestion & Sync Pipeline"
-        D -->|"Register Session Metadata"| F
-        F -->|"Query Metadata Cache"| G[("Backend DB<br/>Postgres")]
-        D -->|"Request Upload URL"| F
-        F -->|"Generate Scoped URL"| I["S3 Presigned URL Generator"]
-        D -->|"HTTP PUT Video File"| J["AWS S3 Bucket"]
-    end
+subgraph Upload
+    D -->|"Register Metadata"| F
+    F --> G["Postgres"]
+    D -->|"Request Presigned URL"| F
+    F --> I["S3 Presigned URL Generator"]
+    D -->|"PUT Video"| J["S3 Bucket"]
+end
 
-    subgraph "Verification & Confirmation"
-        J -->|"s3:ObjectCreated Event"| K["AWS Lambda Hook"]
-        K -->|"Event Webhook API Callback"| F
-        F -->|"Mark Uploaded & Close Session"| G
-        D -->|"Poll Status / Delete File"| F
-    end
-
-    style J fill:#f96,stroke:#333,stroke-width:2px
-    style C fill:#9cf,stroke:#333,stroke-width:2px
-    style F fill:#bbf,stroke:#333,stroke-width:2px
+subgraph Verification
+    J -->|"ObjectCreated"| K["Lambda"]
+    K -->|"Webhook"| F
+    F -->|"Mark Uploaded"| G
+    D -->|"Poll Status"| F
+end
+```
 
 ### Decoupled Data Flow Pipeline
 1. **Capture**: The worker records a video. The video file (MP4) is written to the local device storage (`local_path`).
