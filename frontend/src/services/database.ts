@@ -216,6 +216,8 @@ export const databaseService = {
           console.warn('Failed to set WAL pragma:', pragmaErr);
         }
       }
+
+
     } catch (e) {
       console.error('Failed to initialize database tables', e);
       throw e;

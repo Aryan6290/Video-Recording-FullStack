@@ -13,6 +13,14 @@ A production-grade, secure, and offline-resilient Egocentric Video Capture Syste
 
 ---
 
+## 📱 Application UI Showcase
+
+| Camera Capture Interface | Video Management Dashboard |
+| :---: | :---: |
+| ![Camera Capture Interface](frontend/screenshots/Screenshot_1781871471.png) | ![Video Management Dashboard](frontend/screenshots/Screenshot_1781875373.png) |
+
+---
+
 ## 🛠️ Step-by-Step Setup & Running Guide
 
 ### 1. Python FastAPI Backend Service
