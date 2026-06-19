@@ -46,3 +46,8 @@ backend/video_capture.db
 .terraform.lock.hcl
 crash.log
 dummy_lambda.zip
+
+# Built Binary Packages
+*.apk
+*.aar
+*.app
